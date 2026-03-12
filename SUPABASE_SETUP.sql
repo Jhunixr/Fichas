@@ -206,3 +206,19 @@ using (
   )
 );
 
+-- Fichas: promotoras pueden DELETE solo si la ficha pertenece a sus colegios
+drop policy if exists fichas_delete_own on public.fichas_colegio;
+create policy fichas_delete_own
+on public.fichas_colegio
+for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.secciones s
+    join public.colegios c on c.id = s.colegio_id
+    where s.id = fichas_colegio.seccion_id
+      and c.promotora_id = auth.uid()
+  )
+);
+
