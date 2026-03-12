@@ -252,6 +252,29 @@ export function PromotoraDashboardPage() {
     setEditForm(null)
   }
 
+  const deleteAlumno = async (fichaId: string, alumnoNombre: string) => {
+    if (!supabase) return
+    const confirm = window.confirm(`¿Eliminar la ficha de ${alumnoNombre}? Esta acción no se puede deshacer.`)
+    if (!confirm) return
+    setLoading(true)
+    setError(null)
+    const { error } = await supabase!.from('fichas_colegio').delete().eq('id', fichaId)
+    if (error) {
+      setError('No se pudo eliminar la ficha. Revisa RLS.')
+      setLoading(false)
+      return
+    }
+    setSectionRows((prev) => prev.filter((r) => r.id !== fichaId))
+    setCounts((prev) => {
+      const copy = { ...prev }
+      if (expandedSectionId && copy[expandedSectionId]) {
+        copy[expandedSectionId] = Math.max(0, copy[expandedSectionId] - 1)
+      }
+      return copy
+    })
+    setLoading(false)
+  }
+
   const deleteColegio = async () => {
     if (!supabase) return
     if (!selectedColegioId) return
@@ -641,14 +664,25 @@ export function PromotoraDashboardPage() {
                                           .join(' / ') || '—'}
                                       </span>
                                     </div>
-                                    <button
-                                      type="button"
-                                      className="btn-link"
-                                      style={{ marginTop: 6, paddingLeft: 0 }}
-                                      onClick={() => startEdit(r)}
-                                    >
-                                      Editar datos
-                                    </button>
+                                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                                      <button
+                                        type="button"
+                                        className="btn-link"
+                                        style={{ paddingLeft: 0 }}
+                                        onClick={() => startEdit(r)}
+                                      >
+                                        Editar datos
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn-link"
+                                        style={{ paddingLeft: 0, color: '#D02340' }}
+                                        onClick={() => deleteAlumno(r.id, `${r.primer_apellido} ${r.nombres}`)}
+                                        disabled={loading}
+                                      >
+                                        Eliminar
+                                      </button>
+                                    </div>
                                   </div>
                                 )}
                               </article>

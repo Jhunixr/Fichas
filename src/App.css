@@ -343,8 +343,8 @@
 .fichas-grid {
   margin-top: 16px;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 16px;
 }
 
 .ficha-card {
@@ -353,6 +353,8 @@
   background: #ffffff;
   padding: 24px;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
 }
 
 .ficha-card-header {
@@ -361,7 +363,8 @@
   align-items: baseline;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(208, 35, 64, 0.1);
+  border-bottom: 2px solid rgba(208, 35, 64, 0.15);
+  gap: 8px;
 }
 
 .ficha-card-header h3 {
@@ -369,19 +372,24 @@
   font-size: 1.2rem;
   color: #D02340;
   font-weight: 700;
+  flex: 1;
+  word-break: break-word;
 }
 
 .ficha-card-header span {
   font-size: 0.9rem;
   color: #777;
+  font-weight: 500;
+  flex-shrink: 0;
 }
 
 .ficha-card-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   font-size: 0.95rem;
-  margin-top: 12px;
+  margin-top: 8px;
+  flex: 1;
 }
 
 .ficha-field-label {
@@ -393,15 +401,16 @@
   color: #222;
   word-wrap: break-word;
   line-height: 1.4;
+  margin-bottom: 4px;
 }
 
 .ficha-line {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 140px 1fr;
   align-items: start;
-  gap: 16px;
-  margin-bottom: 10px;
-  padding-bottom: 6px;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 0;
 }
 
 .ficha-line-label {
@@ -410,27 +419,18 @@
   text-align: left;
   font-weight: 600;
   color: #555;
-}
-
-.ficha-card {
-  max-width: 520px;
-}
-
-@media (min-width: 640px) {
-  .ficha-card {
-    max-width: none;
-  }
+  font-size: 0.95rem;
 }
 
 @media (min-width: 640px) {
   .fichas-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (min-width: 960px) {
   .fichas-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(360px, 1fr));
   }
 }
 
