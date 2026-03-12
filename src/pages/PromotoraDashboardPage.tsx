@@ -288,38 +288,55 @@ export function PromotoraDashboardPage() {
     
     try {
       // Obtener todas las secciones del colegio
-      const seccionesDelColegio = secciones.filter((s) => s.colegio_id === selectedColegioId)
-      const seccionesIds = seccionesDelColegio.map((s) => s.id)
+      const { data: seccionesDelColegio, error: seccionesError } = await supabase!
+        .from('secciones')
+        .select('id')
+        .eq('colegio_id', selectedColegioId)
       
-      // Eliminar todas las fichas de cada sección (una por una o en grupos)
-      for (const seccionId of seccionesIds) {
-        const { error: fichasError } = await supabase!
-          .from('fichas_colegio')
-          .delete()
-          .eq('seccion_id', seccionId)
-        if (fichasError) {
-          setError('No se pudo eliminar las fichas del colegio. Revisa RLS.')
-          setLoading(false)
-          return
+      if (seccionesError) {
+        setError('No se pudo obtener las secciones del colegio.')
+        setLoading(false)
+        return
+      }
+      
+      const seccionesIds = seccionesDelColegio?.map((s) => s.id) ?? []
+      
+      // Eliminar todas las fichas de cada sección
+      if (seccionesIds.length > 0) {
+        for (const seccionId of seccionesIds) {
+          const { error: fichasError } = await supabase!
+            .from('fichas_colegio')
+            .delete()
+            .eq('seccion_id', seccionId)
+          if (fichasError) {
+            console.error('Error eliminando fichas:', fichasError)
+            setError('No se pudo eliminar las fichas. Revisa RLS.')
+            setLoading(false)
+            return
+          }
         }
       }
       
       // Luego eliminar todas las secciones (una por una)
-      for (const seccionId of seccionesIds) {
-        const { error: seccionError } = await supabase!
-          .from('secciones')
-          .delete()
-          .eq('id', seccionId)
-        if (seccionError) {
-          setError('No se pudo eliminar las secciones del colegio. Revisa RLS.')
-          setLoading(false)
-          return
+      if (seccionesIds.length > 0) {
+        for (const seccionId of seccionesIds) {
+          const { error: seccionError } = await supabase!
+            .from('secciones')
+            .delete()
+            .eq('id', seccionId)
+          if (seccionError) {
+            console.error('Error eliminando sección:', seccionError)
+            setError('No se pudo eliminar las secciones. Revisa RLS.')
+            setLoading(false)
+            return
+          }
         }
       }
       
       // Finalmente eliminar el colegio
       const { error } = await supabase!.from('colegios').delete().eq('id', selectedColegioId)
       if (error) {
+        console.error('Error eliminando colegio:', error)
         setError('No se pudo eliminar el colegio. Revisa RLS.')
         setLoading(false)
         return
@@ -338,6 +355,7 @@ export function PromotoraDashboardPage() {
         setSectionRows([])
       }
     } catch (err) {
+      console.error('Error inesperado:', err)
       setError('Error inesperado al eliminar el colegio.')
     }
     setLoading(false)
