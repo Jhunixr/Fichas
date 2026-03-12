@@ -1,0 +1,400 @@
+.app-root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: 12px 10px 24px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+.page {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  color: #333;
+}
+
+.page-student,
+.page-admin {
+  max-width: 960px;
+}
+
+.page-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 20px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(208, 35, 64, 0.15);
+}
+
+.logo-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.logo-wrap svg {
+  flex-shrink: 0;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: 0.03em;
+  color: #D02340;
+  font-weight: 700;
+  text-shadow: none;
+}
+
+.page-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: #333;
+  text-align: center;
+  font-weight: 500;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px 16px;
+  border: 1px solid rgba(208, 35, 64, 0.15);
+  box-shadow: 0 8px 32px rgba(208, 35, 64, 0.12);
+}
+
+.form-card {
+  overflow: hidden;
+}
+
+.section {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 0.95rem;
+  margin: 0 0 10px;
+  color: #D02340;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+/* Mobile-first: una columna por defecto */
+.grid-1,
+.grid-2,
+.grid-3 {
+  display: grid;
+  gap: 12px 14px;
+}
+
+.grid-2 {
+  grid-template-columns: 1fr;
+}
+
+.grid-3 {
+  grid-template-columns: 1fr;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 0.9rem;
+  color: #444;
+  font-weight: 500;
+}
+
+/* Inputs y selects: mínimo 44px altura (touch), 16px fuente (evita zoom iOS) */
+.field input,
+.field select {
+  min-height: 48px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  padding: 12px 14px;
+  font-size: 16px;
+  background: #fafafa;
+  color: #1a1a1a;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.field input {
+  background: #fafafa;
+}
+
+.field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23D02340' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: #D02340;
+  box-shadow: 0 0 0 2px rgba(208, 35, 64, 0.2);
+}
+
+.field input::placeholder {
+  color: #888;
+}
+
+.correo-completo {
+  background: rgba(208, 35, 64, 0.06) !important;
+  color: #D02340 !important;
+  font-weight: 600;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+}
+
+/* Radios como chips táctiles en móvil */
+.radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  margin-top: 4px;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #444;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  background: #fafafa;
+  min-height: 44px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.radio-group label:active {
+  background: rgba(208, 35, 64, 0.06);
+  border-color: #D02340;
+}
+
+.radio-group input[type='radio'] {
+  accent-color: #D02340;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.radio-group label:has(input:checked) {
+  background: rgba(208, 35, 64, 0.1);
+  border-color: #D02340;
+  color: #D02340;
+  font-weight: 600;
+}
+
+.required {
+  color: #D02340;
+}
+
+.error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #D02340;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+.form-footer {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(208, 35, 64, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.table-wrapper {
+  margin-top: 8px;
+  border-radius: 12px;
+  overflow: auto;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.table th,
+.table td {
+  padding: 6px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table thead {
+  background: rgba(208, 35, 64, 0.08);
+  border-bottom: 2px solid #D02340;
+  color: #333;
+}
+
+.table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.table tbody tr:nth-child(odd) {
+  background: #fff;
+}
+
+.qr-wrapper {
+  display: inline-flex;
+  padding: 12px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(208, 35, 64, 0.15);
+  border: 1px solid rgba(208, 35, 64, 0.2);
+}
+
+.btn-primary {
+  border-radius: 14px;
+  border: none;
+  padding: 14px 24px;
+  min-height: 52px;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: #D02340;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(208, 35, 64, 0.35);
+  width: 100%;
+  transition: filter 0.15s, transform 0.1s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  background: #e83a58;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: default;
+  box-shadow: none;
+}
+
+/* link button (login/register toggle, sign out, etc.) */
+.btn-link {
+  border: none;
+  background: transparent;
+  color: #D02340;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.btn-link:hover {
+  color: #e83a58;
+}
+
+.auth-card {
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.icon-button-danger {
+  border: none;
+  background: transparent;
+  color: #D02340;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+
+.icon-button-danger:hover {
+  color: #e83a58;
+}
+
+/* Scroll suave y margen para teclado virtual */
+.section {
+  scroll-margin-top: 20px;
+}
+
+.field input,
+.field select {
+  scroll-margin-bottom: 80px;
+}
+
+/* Tablet: 2 columnas */
+@media (min-width: 540px) {
+  .app-root {
+    padding: 20px 16px 32px;
+  }
+
+  .page-student,
+  .page-admin {
+    padding: 20px 18px 28px;
+  }
+
+  .grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .form-footer {
+    align-items: flex-start;
+  }
+
+  .btn-primary {
+    width: auto;
+    min-width: 200px;
+  }
+}
+
+/* Desktop: 3 columnas para grid-3 */
+@media (min-width: 768px) {
+  .page-header h1 {
+    font-size: 1.6rem;
+  }
+
+  .section-title {
+    font-size: 1rem;
+  }
+
+  .grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .field input,
+  .field select {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+}

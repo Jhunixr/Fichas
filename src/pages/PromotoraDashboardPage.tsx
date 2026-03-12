@@ -1,0 +1,409 @@
+import { useEffect, useMemo, useState } from 'react'
+import '../App.css'
+import { supabase } from '../lib/supabaseClient'
+import { LogoUTP } from '../components/LogoUTP'
+import { QRCodeCanvas } from 'qrcode.react'
+import type { FichaRecord } from '../utils/generateFichaPdf'
+import { downloadFichaPdf } from '../utils/generateFichaPdf'
+
+type Colegio = {
+  id: string
+  nombre: string
+}
+
+type Seccion = {
+  id: string
+  colegio_id: string
+  nombre: string
+  public_code: string
+}
+
+export function PromotoraDashboardPage() {
+  const [colegios, setColegios] = useState<Colegio[]>([])
+  const [secciones, setSecciones] = useState<Seccion[]>([])
+  const [selectedColegioId, setSelectedColegioId] = useState<string>('')
+
+  const [newColegio, setNewColegio] = useState('')
+  const [newSeccion, setNewSeccion] = useState('')
+
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [counts, setCounts] = useState<Record<string, number>>({})
+  const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null)
+  const [sectionRows, setSectionRows] = useState<FichaRecord[]>([])
+
+  const baseUrl = window.location.origin
+  const selectedSecciones = useMemo(
+    () => secciones.filter((s) => s.colegio_id === selectedColegioId),
+    [secciones, selectedColegioId],
+  )
+
+  useEffect(() => {
+    if (!supabase) return
+    const load = async () => {
+      setLoading(true)
+      setError(null)
+
+      const colegiosRes = await supabase!
+        .from('colegios')
+        .select('id,nombre')
+        .order('nombre', { ascending: true })
+
+      if (colegiosRes.error) {
+        setError('No se pudo cargar colegios. Revisa las políticas (RLS).')
+        setLoading(false)
+        return
+      }
+
+      setColegios((colegiosRes.data ?? []) as Colegio[])
+
+      const seccionesRes = await supabase!
+        .from('secciones')
+        .select('id,colegio_id,nombre,public_code')
+        .order('created_at', { ascending: true })
+
+      if (seccionesRes.error) {
+        setError('No se pudo cargar secciones. Revisa las políticas (RLS).')
+        setLoading(false)
+        return
+      }
+
+      setSecciones((seccionesRes.data ?? []) as Seccion[])
+      setLoading(false)
+    }
+    void load()
+  }, [])
+
+  useEffect(() => {
+    if (!supabase) return
+    if (!selectedColegioId) return
+    const run = async () => {
+      const next: Record<string, number> = {}
+      for (const s of selectedSecciones) {
+        const { count } = await supabase!
+          .from('fichas_colegio')
+          .select('id', { count: 'exact', head: true })
+          .eq('seccion_id', s.id)
+        next[s.id] = count ?? 0
+      }
+      setCounts(next)
+    }
+    void run()
+  }, [selectedColegioId, selectedSecciones])
+
+  const createColegio = async () => {
+    setError(null)
+    if (!supabase) return
+    if (!newColegio.trim()) return
+    setLoading(true)
+    const { data, error } = await supabase!
+      .from('colegios')
+      .insert({ nombre: newColegio.trim() })
+      .select('id,nombre')
+      .single()
+    if (error) {
+      setError('No se pudo crear el colegio. Revisa RLS.')
+      setLoading(false)
+      return
+    }
+    setColegios((prev) => [...prev, data as Colegio].sort((a, b) => a.nombre.localeCompare(b.nombre)))
+    setNewColegio('')
+    setSelectedColegioId((data as Colegio).id)
+    setLoading(false)
+  }
+
+  const createSeccion = async () => {
+    setError(null)
+    if (!supabase) return
+    if (!selectedColegioId) return
+    if (!newSeccion.trim()) return
+    setLoading(true)
+    const { data, error } = await supabase!
+      .from('secciones')
+      .insert({ colegio_id: selectedColegioId, nombre: newSeccion.trim() })
+      .select('id,colegio_id,nombre,public_code')
+      .single()
+    if (error) {
+      setError('No se pudo crear la sección. Revisa RLS.')
+      setLoading(false)
+      return
+    }
+    setSecciones((prev) => [...prev, data as Seccion])
+    setNewSeccion('')
+    setLoading(false)
+  }
+
+  const toggleSection = async (seccionId: string) => {
+    if (!supabase) return
+    if (expandedSectionId === seccionId) {
+      setExpandedSectionId(null)
+      setSectionRows([])
+      return
+    }
+    setExpandedSectionId(seccionId)
+    setLoading(true)
+    setError(null)
+    const { data, error } = await supabase!
+      .from('fichas_colegio')
+      .select('*')
+      .eq('seccion_id', seccionId)
+      .order('created_at', { ascending: true })
+    if (error) {
+      setError('No se pudieron cargar las fichas de esta sección.')
+      setLoading(false)
+      return
+    }
+    setSectionRows((data ?? []) as FichaRecord[])
+    setLoading(false)
+  }
+
+  const downloadPdfForSection = async (seccionId: string, seccionNombre: string) => {
+    if (!supabase) return
+    setLoading(true)
+    setError(null)
+    const { data, error } = await supabase!
+      .from('fichas_colegio')
+      .select('*')
+      .eq('seccion_id', seccionId)
+      .order('created_at', { ascending: true })
+    if (error) {
+      setError('No se pudo generar el informe. Revisa RLS.')
+      setLoading(false)
+      return
+    }
+    const colegioNombre = colegios.find((c) => c.id === selectedColegioId)?.nombre ?? 'Colegio'
+    await downloadFichaPdf(colegioNombre, seccionNombre, (data ?? []) as FichaRecord[])
+    setLoading(false)
+  }
+
+  const deleteSection = async (seccionId: string) => {
+    if (!supabase) return
+    const confirm = window.confirm(
+      '¿Eliminar esta sección y sus fichas asociadas? Esta acción no se puede deshacer.',
+    )
+    if (!confirm) return
+    setLoading(true)
+    setError(null)
+    const { error } = await supabase!.from('secciones').delete().eq('id', seccionId)
+    if (error) {
+      setError('No se pudo eliminar la sección. Revisa RLS.')
+      setLoading(false)
+      return
+    }
+    setSecciones((prev) => prev.filter((s) => s.id !== seccionId))
+    setCounts((prev) => {
+      const copy = { ...prev }
+      delete copy[seccionId]
+      return copy
+    })
+    if (expandedSectionId === seccionId) {
+      setExpandedSectionId(null)
+      setSectionRows([])
+    }
+    setLoading(false)
+  }
+
+  const deleteColegio = async () => {
+    if (!supabase) return
+    if (!selectedColegioId) return
+    const colegio = colegios.find((c) => c.id === selectedColegioId)
+    const confirm = window.confirm(
+      `¿Eliminar el colegio "${colegio?.nombre ?? ''}" y todas sus secciones y fichas asociadas? Esta acción no se puede deshacer.`,
+    )
+    if (!confirm) return
+    setLoading(true)
+    setError(null)
+    const { error } = await supabase!.from('colegios').delete().eq('id', selectedColegioId)
+    if (error) {
+      setError('No se pudo eliminar el colegio. Revisa RLS.')
+      setLoading(false)
+      return
+    }
+    setColegios((prev) => prev.filter((c) => c.id !== selectedColegioId))
+    const seccionesIds = secciones.filter((s) => s.colegio_id === selectedColegioId).map((s) => s.id)
+    setSecciones((prev) => prev.filter((s) => s.colegio_id !== selectedColegioId))
+    setCounts((prev) => {
+      const copy = { ...prev }
+      for (const id of seccionesIds) delete copy[id]
+      return copy
+    })
+    setSelectedColegioId('')
+    if (expandedSectionId && seccionesIds.includes(expandedSectionId)) {
+      setExpandedSectionId(null)
+      setSectionRows([])
+    }
+    setLoading(false)
+  }
+
+  const signOut = async () => {
+    if (!supabase) return
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }
+
+  return (
+    <div className="page page-admin">
+      <div className="card" style={{ marginBottom: 16 }}>
+        <header className="page-header">
+          <div className="logo-wrap">
+            <LogoUTP width={140} height={52} />
+          </div>
+          <h1>Panel de promotora</h1>
+          <p className="page-subtitle">
+            Crea tus colegios y secciones. El sistema generará un QR para que los alumnos escaneen y registren su ficha.
+          </p>
+        </header>
+
+        <div className="grid-2">
+          <div className="field">
+            <label>Nuevo colegio</label>
+            <input value={newColegio} onChange={(e) => setNewColegio(e.target.value)} placeholder="Ej: Colegio San Juan" />
+          </div>
+          <div className="field" style={{ justifyContent: 'flex-end' }}>
+            <label>&nbsp;</label>
+            <button className="btn-primary" type="button" onClick={createColegio} disabled={loading}>
+              Crear colegio
+            </button>
+          </div>
+        </div>
+
+        <div className="grid-2" style={{ marginTop: 12 }}>
+          <div className="field">
+            <label>Selecciona colegio</label>
+            <select
+              value={selectedColegioId}
+              onChange={(e) => setSelectedColegioId(e.target.value)}
+            >
+              <option value="">Selecciona…</option>
+              {colegios.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+            {selectedColegioId && (
+              <button
+                type="button"
+                className="btn-link"
+                style={{ marginTop: 4, alignSelf: 'flex-start' }}
+                onClick={() => void deleteColegio()}
+                disabled={loading}
+              >
+                Eliminar colegio
+              </button>
+            )}
+          </div>
+          <div className="field">
+            <label>Nueva sección</label>
+            <input
+              value={newSeccion}
+              onChange={(e) => setNewSeccion(e.target.value)}
+              placeholder="Ej: 5to B"
+              disabled={!selectedColegioId}
+            />
+          </div>
+        </div>
+
+        <div className="form-footer">
+          {error && <p className="error">{error}</p>}
+          <div style={{ display: 'flex', gap: 12, width: '100%', flexWrap: 'wrap' }}>
+            <button className="btn-primary" type="button" onClick={createSeccion} disabled={loading || !selectedColegioId}>
+              Crear sección
+            </button>
+            <button className="btn-link" type="button" onClick={signOut}>
+              Cerrar sesión
+            </button>
+          </div>
+          {loading && <p className="hint">Cargando…</p>}
+        </div>
+      </div>
+
+      {selectedColegioId && (
+        <div className="card">
+          <h2 className="section-title">Secciones y QR</h2>
+          {!selectedSecciones.length ? (
+            <p className="hint">Aún no hay secciones para este colegio.</p>
+          ) : (
+            <div className="grid-2">
+              {selectedSecciones.map((s) => {
+                const link = `${baseUrl}/s/${encodeURIComponent(s.public_code)}`
+                return (
+                  <div key={s.id} className="card" style={{ padding: 16, border: '1px solid rgba(208,35,64,0.15)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <p style={{ margin: 0, fontWeight: 700, color: '#D02340' }}>{s.nombre}</p>
+                      <button
+                        className="btn-link"
+                        type="button"
+                        onClick={() => deleteSection(s.id)}
+                        disabled={loading}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                    <p className="hint" style={{ marginTop: 6 }}>
+                      Registrados: <strong>{counts[s.id] ?? 0}</strong>
+                    </p>
+                    <p className="hint" style={{ marginTop: 6 }}>
+                      Link alumno: <span className="mono">{link}</span>
+                    </p>
+                    <div className="qr-wrapper" style={{ marginTop: 10 }}>
+                      <QRCodeCanvas value={link} size={160} bgColor="#ffffff" fgColor="#D02340" includeMargin />
+                    </div>
+                    <p className="hint" style={{ marginTop: 8 }}>
+                      Los alumnos solo escanean el QR y llenan la ficha.
+                    </p>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
+                      <button className="btn-primary" type="button" onClick={() => toggleSection(s.id)} disabled={loading}>
+                        {expandedSectionId === s.id ? 'Ocultar fichas' : 'Ver fichas'}
+                      </button>
+                      <button
+                        className="btn-link"
+                        type="button"
+                        onClick={() => downloadPdfForSection(s.id, s.nombre)}
+                        disabled={loading}
+                      >
+                        Descargar PDF
+                      </button>
+                    </div>
+                    {expandedSectionId === s.id && (
+                      <div style={{ marginTop: 12 }}>
+                        <div className="table-wrapper">
+                          <table className="table">
+                            <thead>
+                              <tr>
+                                <th>Alumno</th>
+                                <th>DNI</th>
+                                <th>Celular</th>
+                                <th>Año</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sectionRows.map((r) => (
+                                <tr key={`${r.dni}-${r.created_at}`}>
+                                  <td>{`${r.primer_apellido} ${r.segundo_apellido ?? ''} ${r.nombres}`}</td>
+                                  <td>{r.dni}</td>
+                                  <td>{r.celular_alumno}</td>
+                                  <td>{r.anio_que_cursa}</td>
+                                </tr>
+                              ))}
+                              {!sectionRows.length && (
+                                <tr>
+                                  <td colSpan={4}>Aún no hay fichas en esta sección.</td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
