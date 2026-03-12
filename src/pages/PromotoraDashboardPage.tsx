@@ -285,6 +285,38 @@ export function PromotoraDashboardPage() {
     if (!confirm) return
     setLoading(true)
     setError(null)
+    
+    // Primero obtener todas las secciones del colegio
+    const seccionesDelColegio = secciones.filter((s) => s.colegio_id === selectedColegioId)
+    const seccionesIds = seccionesDelColegio.map((s) => s.id)
+    
+    // Eliminar todas las fichas de esas secciones
+    if (seccionesIds.length > 0) {
+      const { error: fichasError } = await supabase!
+        .from('fichas_colegio')
+        .delete()
+        .in('seccion_id', seccionesIds)
+      if (fichasError) {
+        setError('No se pudo eliminar las fichas del colegio. Revisa RLS.')
+        setLoading(false)
+        return
+      }
+    }
+    
+    // Luego eliminar todas las secciones
+    if (seccionesIds.length > 0) {
+      const { error: seccionesError } = await supabase!
+        .from('secciones')
+        .delete()
+        .in('id', seccionesIds)
+      if (seccionesError) {
+        setError('No se pudo eliminar las secciones del colegio. Revisa RLS.')
+        setLoading(false)
+        return
+      }
+    }
+    
+    // Finalmente eliminar el colegio
     const { error } = await supabase!.from('colegios').delete().eq('id', selectedColegioId)
     if (error) {
       setError('No se pudo eliminar el colegio. Revisa RLS.')
@@ -292,7 +324,6 @@ export function PromotoraDashboardPage() {
       return
     }
     setColegios((prev) => prev.filter((c) => c.id !== selectedColegioId))
-    const seccionesIds = secciones.filter((s) => s.colegio_id === selectedColegioId).map((s) => s.id)
     setSecciones((prev) => prev.filter((s) => s.colegio_id !== selectedColegioId))
     setCounts((prev) => {
       const copy = { ...prev }
