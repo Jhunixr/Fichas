@@ -304,24 +304,26 @@ export function PromotoraDashboardPage() {
       
       // Primero eliminar TODAS las fichas de todas las secciones
       if (seccionesIds.length > 0) {
-        console.log('Intentando eliminar fichas de secciones:', seccionesIds)
+        console.log('Eliminando fichas de secciones:', seccionesIds)
         
-        // Intentar eliminar con .in() 
-        const { error: fichasError, status: fichasStatus } = await supabase!
+        // Usar delete con filtro in()
+        const { error: fichasError, status: fichasStatus, count } = await supabase!
           .from('fichas_colegio')
           .delete()
           .in('seccion_id', seccionesIds)
         
-        console.log('Resultado delete fichas - Error:', fichasError, 'Status:', fichasStatus)
+        console.log('Delete fichas - Error:', fichasError, 'Status:', fichasStatus, 'Count:', count)
         
         if (fichasError) {
           console.error('Error eliminando fichas:', fichasError)
-          // No retornar, intentar continuar de todas formas
+          setError(`No se pudo eliminar las fichas: ${fichasError.message}. Ejecuta el SQL en Supabase.`)
+          setLoading(false)
+          return
         }
       }
       
-      // Esperar un poco para que Supabase procese
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Esperar 1 segundo para que Supabase procese completamente
+      await new Promise(resolve => setTimeout(resolve, 1000))
       
       // Luego eliminar todas las secciones (una por una)
       if (seccionesIds.length > 0) {
@@ -329,7 +331,7 @@ export function PromotoraDashboardPage() {
           console.log('Eliminando sección:', seccionId)
           
           // Verificar si hay fichas aún en esta sección
-          const { data: fichasCheck, error: checkError } = await supabase!
+          const { data: fichasCheck } = await supabase!
             .from('fichas_colegio')
             .select('id', { count: 'exact', head: true })
             .eq('seccion_id', seccionId)
@@ -343,7 +345,7 @@ export function PromotoraDashboardPage() {
           
           if (seccionError) {
             console.error('Error eliminando sección:', seccionError, 'Status:', seccionStatus)
-            setError(`No se pudo eliminar la sección. Error: ${seccionError.message}`)
+            setError(`Error al eliminar sección: ${seccionError.message}. Verifica que todas las fichas fueron eliminadas.`)
             setLoading(false)
             return
           }
@@ -353,10 +355,10 @@ export function PromotoraDashboardPage() {
       
       // Finalmente eliminar el colegio
       console.log('Eliminando colegio:', selectedColegioId)
-      const { error, status } = await supabase!.from('colegios').delete().eq('id', selectedColegioId)
+      const { error } = await supabase!.from('colegios').delete().eq('id', selectedColegioId)
       if (error) {
-        console.error('Error eliminando colegio:', error, 'Status:', status)
-        setError(`No se pudo eliminar el colegio: ${error.message}`)
+        console.error('Error eliminando colegio:', error)
+        setError(`Error al eliminar colegio: ${error.message}`)
         setLoading(false)
         return
       }
