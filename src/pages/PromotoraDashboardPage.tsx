@@ -287,89 +287,42 @@ export function PromotoraDashboardPage() {
     setError(null)
     
     try {
-      // Obtener todas las secciones del colegio
-      const { data: seccionesDelColegio, error: seccionesError } = await supabase!
-        .from('secciones')
-        .select('id')
-        .eq('colegio_id', selectedColegioId)
+      // Usar la función RPC para eliminar en cascada
+      const { data, error } = await supabase!.rpc('delete_colegio_cascada', {
+        p_colegio_id: selectedColegioId,
+      })
       
-      if (seccionesError) {
-        setError('No se pudo obtener las secciones del colegio.')
+      console.log('RPC Result:', data, 'Error:', error)
+      
+      if (error) {
+        console.error('Error en RPC:', error)
+        setError(`Error al eliminar: ${error.message}`)
         setLoading(false)
         return
       }
       
-      const seccionesIds = seccionesDelColegio?.map((s) => s.id) ?? []
-      console.log('Secciones a eliminar:', seccionesIds)
-      
-      // Paso 1: Obtener TODOS los IDs de fichas asociadas
-      if (seccionesIds.length > 0) {
-        const { data: fichasData } = await supabase!
-          .from('fichas_colegio')
-          .select('id')
-          .in('seccion_id', seccionesIds)
-        
-        const fichasIds = fichasData?.map((f) => f.id) ?? []
-        console.log('Fichas encontradas:', fichasIds.length)
-        
-        // Paso 2: Eliminar TODAS las fichas de una sola vez
-        if (fichasIds.length > 0) {
-          const { error: deleteError } = await supabase!
-            .from('fichas_colegio')
-            .delete()
-            .in('id', fichasIds)
-          
-          if (deleteError) {
-            console.error('Error al eliminar fichas:', deleteError)
-            setError(`No se pudo eliminar las fichas. Por favor ejecuta el SQL RLS en Supabase. Error: ${deleteError.message}`)
-            setLoading(false)
-            return
-          }
-          console.log('Fichas eliminadas correctamente')
-        }
-      }
-      
-      // Esperar 1.5 segundos para asegurar que Supabase procesó completamente
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      // Paso 3: Eliminar todas las secciones
-      if (seccionesIds.length > 0) {
-        for (const seccionId of seccionesIds) {
-          console.log('Eliminando sección:', seccionId)
-          const { error: seccionError } = await supabase!
-            .from('secciones')
-            .delete()
-            .eq('id', seccionId)
-          
-          if (seccionError) {
-            console.error('Error eliminando sección:', seccionError)
-            setError(`Error al eliminar sección: ${seccionError.message}`)
-            setLoading(false)
-            return
-          }
-        }
-      }
-      
-      // Paso 4: Eliminar el colegio
-      const { error: colegioError } = await supabase!
-        .from('colegios')
-        .delete()
-        .eq('id', selectedColegioId)
-      
-      if (colegioError) {
-        setError(`Error al eliminar colegio: ${colegioError.message}`)
+      if (data && !data.success) {
+        setError(data.message || 'No se pudo eliminar el colegio')
         setLoading(false)
         return
       }
       
-      console.log('Colegio eliminado exitosamente')
+      console.log('Colegio eliminado exitosamente:', data)
+      
+      // Actualizar estado local
       setColegios((prev) => prev.filter((c) => c.id !== selectedColegioId))
       setSecciones((prev) => prev.filter((s) => s.colegio_id !== selectedColegioId))
+      
+      const seccionesIds = secciones
+        .filter((s) => s.colegio_id === selectedColegioId)
+        .map((s) => s.id)
+      
       setCounts((prev) => {
         const copy = { ...prev }
         for (const id of seccionesIds) delete copy[id]
         return copy
       })
+      
       setSelectedColegioId('')
       if (expandedSectionId && seccionesIds.includes(expandedSectionId)) {
         setExpandedSectionId(null)

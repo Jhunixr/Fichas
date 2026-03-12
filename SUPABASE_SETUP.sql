@@ -222,3 +222,79 @@ using (
   )
 );
 
+-- Función RPC para eliminar colegio en cascada (con permisos apropiados)
+create or replace function public.delete_colegio_cascada(p_colegio_id uuid)
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_promotora_id uuid;
+  v_secciones_count int;
+  v_fichas_count int;
+begin
+  -- Verificar que el usuario autenticado es propietario del colegio
+  select promotora_id into v_promotora_id
+  from public.colegios
+  where id = p_colegio_id;
+  
+  if v_promotora_id is null then
+    return json_build_object('success', false, 'message', 'Colegio no encontrado');
+  end if;
+  
+  if v_promotora_id != auth.uid() then
+    return json_build_object('success', false, 'message', 'No tienes permisos para eliminar este colegio');
+  end if;
+  
+  -- Contar secciones
+  select count(*) into v_secciones_count
+  from public.secciones
+  where colegio_id = p_colegio_id;
+  
+  -- Contar fichas
+  select count(*) into v_fichas_count
+  from public.fichas_colegio fc
+  join public.secciones s on s.id = fc.seccion_id
+  where s.colegio_id = p_colegio_id;
+  
+  -- Eliminar fichas
+  delete from public.fichas_colegio fc
+  where fc.seccion_id in (
+    select id from public.secciones where colegio_id = p_colegio_id
+  );
+  
+  -- Eliminar secciones
+  delete from public.secciones
+  where colegio_id = p_colegio_id;
+  
+  -- Eliminar colegio
+  delete from public.colegios
+  where id = p_colegio_id;
+  
+  return json_build_object(
+    'success', true,
+    'message', 'Colegio y sus datos eliminados',
+    'fichas_eliminadas', v_fichas_count,
+    'secciones_eliminadas', v_secciones_count
+  );
+end;
+$$;
+
+-- Dar permisos a usuarios autenticados para usar la función
+grant execute on function public.delete_colegio_cascada(uuid) to authenticated;
+drop policy if exists fichas_delete_own on public.fichas_colegio;
+create policy fichas_delete_own
+on public.fichas_colegio
+for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.secciones s
+    join public.colegios c on c.id = s.colegio_id
+    where s.id = fichas_colegio.seccion_id
+      and c.promotora_id = auth.uid()
+  )
+);
+
