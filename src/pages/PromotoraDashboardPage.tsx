@@ -301,16 +301,29 @@ export function PromotoraDashboardPage() {
       
       const seccionesIds = seccionesDelColegio?.map((s) => s.id) ?? []
       
-      // Eliminar todas las fichas de cada sección
+      // Primero eliminar TODAS las fichas del colegio de una sola vez
       if (seccionesIds.length > 0) {
-        for (const seccionId of seccionesIds) {
+        // Obtener los IDs de fichas para este colegio
+        const { data: fichasData, error: fichasSelectError } = await supabase!
+          .from('fichas_colegio')
+          .select('id')
+          .in('seccion_id', seccionesIds)
+        
+        if (fichasSelectError) {
+          console.error('Error obteniendo fichas:', fichasSelectError)
+        }
+        
+        const fichasIds = fichasData?.map((f) => f.id) ?? []
+        
+        if (fichasIds.length > 0) {
           const { error: fichasError } = await supabase!
             .from('fichas_colegio')
             .delete()
-            .eq('seccion_id', seccionId)
+            .in('id', fichasIds)
+          
           if (fichasError) {
             console.error('Error eliminando fichas:', fichasError)
-            setError('No se pudo eliminar las fichas. Revisa RLS.')
+            setError('No se pudo eliminar las fichas. Intenta de nuevo.')
             setLoading(false)
             return
           }
@@ -326,7 +339,7 @@ export function PromotoraDashboardPage() {
             .eq('id', seccionId)
           if (seccionError) {
             console.error('Error eliminando sección:', seccionError)
-            setError('No se pudo eliminar las secciones. Revisa RLS.')
+            setError('No se pudo eliminar las secciones. Intenta de nuevo.')
             setLoading(false)
             return
           }
@@ -337,7 +350,7 @@ export function PromotoraDashboardPage() {
       const { error } = await supabase!.from('colegios').delete().eq('id', selectedColegioId)
       if (error) {
         console.error('Error eliminando colegio:', error)
-        setError('No se pudo eliminar el colegio. Revisa RLS.')
+        setError('No se pudo eliminar el colegio. Intenta de nuevo.')
         setLoading(false)
         return
       }
