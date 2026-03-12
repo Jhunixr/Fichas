@@ -302,68 +302,67 @@ export function PromotoraDashboardPage() {
       const seccionesIds = seccionesDelColegio?.map((s) => s.id) ?? []
       console.log('Secciones a eliminar:', seccionesIds)
       
-      // Primero eliminar TODAS las fichas de todas las secciones
+      // Paso 1: Obtener TODOS los IDs de fichas asociadas
       if (seccionesIds.length > 0) {
-        console.log('Eliminando fichas de secciones:', seccionesIds)
-        
-        // Usar delete con filtro in()
-        const { error: fichasError, status: fichasStatus, count } = await supabase!
+        const { data: fichasData } = await supabase!
           .from('fichas_colegio')
-          .delete()
+          .select('id')
           .in('seccion_id', seccionesIds)
         
-        console.log('Delete fichas - Error:', fichasError, 'Status:', fichasStatus, 'Count:', count)
+        const fichasIds = fichasData?.map((f) => f.id) ?? []
+        console.log('Fichas encontradas:', fichasIds.length)
         
-        if (fichasError) {
-          console.error('Error eliminando fichas:', fichasError)
-          setError(`No se pudo eliminar las fichas: ${fichasError.message}. Ejecuta el SQL en Supabase.`)
-          setLoading(false)
-          return
+        // Paso 2: Eliminar TODAS las fichas de una sola vez
+        if (fichasIds.length > 0) {
+          const { error: deleteError } = await supabase!
+            .from('fichas_colegio')
+            .delete()
+            .in('id', fichasIds)
+          
+          if (deleteError) {
+            console.error('Error al eliminar fichas:', deleteError)
+            setError(`No se pudo eliminar las fichas. Por favor ejecuta el SQL RLS en Supabase. Error: ${deleteError.message}`)
+            setLoading(false)
+            return
+          }
+          console.log('Fichas eliminadas correctamente')
         }
       }
       
-      // Esperar 1 segundo para que Supabase procese completamente
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Esperar 1.5 segundos para asegurar que Supabase procesó completamente
+      await new Promise(resolve => setTimeout(resolve, 1500))
       
-      // Luego eliminar todas las secciones (una por una)
+      // Paso 3: Eliminar todas las secciones
       if (seccionesIds.length > 0) {
         for (const seccionId of seccionesIds) {
           console.log('Eliminando sección:', seccionId)
-          
-          // Verificar si hay fichas aún en esta sección
-          const { data: fichasCheck } = await supabase!
-            .from('fichas_colegio')
-            .select('id', { count: 'exact', head: true })
-            .eq('seccion_id', seccionId)
-          
-          console.log('Fichas restantes en sección', seccionId, ':', fichasCheck?.length ?? 0)
-          
-          const { error: seccionError, status: seccionStatus } = await supabase!
+          const { error: seccionError } = await supabase!
             .from('secciones')
             .delete()
             .eq('id', seccionId)
           
           if (seccionError) {
-            console.error('Error eliminando sección:', seccionError, 'Status:', seccionStatus)
-            setError(`Error al eliminar sección: ${seccionError.message}. Verifica que todas las fichas fueron eliminadas.`)
+            console.error('Error eliminando sección:', seccionError)
+            setError(`Error al eliminar sección: ${seccionError.message}`)
             setLoading(false)
             return
           }
-          console.log('Sección eliminada correctamente')
         }
       }
       
-      // Finalmente eliminar el colegio
-      console.log('Eliminando colegio:', selectedColegioId)
-      const { error } = await supabase!.from('colegios').delete().eq('id', selectedColegioId)
-      if (error) {
-        console.error('Error eliminando colegio:', error)
-        setError(`Error al eliminar colegio: ${error.message}`)
+      // Paso 4: Eliminar el colegio
+      const { error: colegioError } = await supabase!
+        .from('colegios')
+        .delete()
+        .eq('id', selectedColegioId)
+      
+      if (colegioError) {
+        setError(`Error al eliminar colegio: ${colegioError.message}`)
         setLoading(false)
         return
       }
-      console.log('Colegio eliminado correctamente')
       
+      console.log('Colegio eliminado exitosamente')
       setColegios((prev) => prev.filter((c) => c.id !== selectedColegioId))
       setSecciones((prev) => prev.filter((s) => s.colegio_id !== selectedColegioId))
       setCounts((prev) => {
