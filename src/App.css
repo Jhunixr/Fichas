@@ -339,6 +339,91 @@
   color: #e83a58;
 }
 
+/* Tarjetas de ficha (vista promotora) */
+.fichas-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.ficha-card {
+  border-radius: 16px;
+  border: 1px solid rgba(208, 35, 64, 0.25);
+  background: #ffffff;
+  padding: 14px 16px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.04);
+}
+
+.ficha-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.ficha-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #D02340;
+}
+
+.ficha-card-header span {
+  font-size: 0.78rem;
+  color: #777;
+}
+
+.ficha-card-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+.ficha-field-label {
+  font-weight: 600;
+  color: #555;
+}
+
+.ficha-field-value {
+  color: #222;
+  word-wrap: break-word;
+}
+
+.ficha-line {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  align-items: start;
+  gap: 8px;
+}
+
+.ficha-line-label {
+  white-space: nowrap;
+}
+
+.ficha-card {
+  max-width: 520px;
+}
+
+@media (min-width: 640px) {
+  .ficha-card {
+    max-width: none;
+  }
+}
+
+@media (min-width: 640px) {
+  .fichas-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .fichas-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 /* Scroll suave y margen para teclado virtual */
 .section {
   scroll-margin-top: 20px;

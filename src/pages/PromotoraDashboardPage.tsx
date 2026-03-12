@@ -31,6 +31,8 @@ export function PromotoraDashboardPage() {
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null)
   const [sectionRows, setSectionRows] = useState<FichaRecord[]>([])
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<Partial<FichaRecord> | null>(null)
 
   const baseUrl = window.location.origin
   const selectedSecciones = useMemo(
@@ -138,6 +140,8 @@ export function PromotoraDashboardPage() {
     if (expandedSectionId === seccionId) {
       setExpandedSectionId(null)
       setSectionRows([])
+      setEditingId(null)
+      setEditForm(null)
       return
     }
     setExpandedSectionId(seccionId)
@@ -154,6 +158,8 @@ export function PromotoraDashboardPage() {
       return
     }
     setSectionRows((data ?? []) as FichaRecord[])
+    setEditingId(null)
+    setEditForm(null)
     setLoading(false)
   }
 
@@ -201,6 +207,49 @@ export function PromotoraDashboardPage() {
       setSectionRows([])
     }
     setLoading(false)
+  }
+
+  const startEdit = (row: FichaRecord) => {
+    setEditingId(row.id)
+    setEditForm({ ...row })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditForm(null)
+  }
+
+  const saveEdit = async () => {
+    if (!supabase || !editingId || !editForm) return
+    setLoading(true)
+    setError(null)
+    const payload = {
+      celular_alumno: editForm.celular_alumno,
+      email: editForm.email,
+      nombre_padre: editForm.nombre_padre,
+      celular_padre: editForm.celular_padre,
+      nombre_madre: editForm.nombre_madre,
+      celular_madre: editForm.celular_madre,
+      codigo_carrera_1: editForm.codigo_carrera_1,
+      codigo_carrera_2: editForm.codigo_carrera_2,
+      direccion: editForm.direccion,
+      distrito: editForm.distrito,
+      provincia: editForm.provincia,
+      departamento: editForm.departamento,
+      dni: editForm.dni,
+    }
+    const { error } = await supabase.from('fichas_colegio').update(payload).eq('id', editingId)
+    if (error) {
+      setError('No se pudo actualizar la ficha. Revisa RLS o intenta de nuevo.')
+      setLoading(false)
+      return
+    }
+    setSectionRows((prev) =>
+      prev.map((r) => (r.id === editingId ? { ...r, ...payload } as FichaRecord : r)),
+    )
+    setLoading(false)
+    setEditingId(null)
+    setEditForm(null)
   }
 
   const deleteColegio = async () => {
@@ -394,6 +443,218 @@ export function PromotoraDashboardPage() {
                             </tbody>
                           </table>
                         </div>
+                        {sectionRows.length > 0 && (
+                          <div className="fichas-grid">
+                            {sectionRows.map((r) => (
+                              <article key={`${r.dni}-${r.created_at}-card`} className="ficha-card">
+                                <div className="ficha-card-header">
+                                  <h3>{`${r.primer_apellido} ${r.segundo_apellido ?? ''} ${r.nombres}`}</h3>
+                                  <span>DNI: {r.dni ?? '—'}</span>
+                                </div>
+                                {editingId === r.id && editForm ? (
+                                  <div className="ficha-card-section">
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Celular alumno:</span>
+                                      <input
+                                        className="ficha-field-value"
+                                        value={editForm.celular_alumno ?? ''}
+                                        onChange={(e) =>
+                                          setEditForm((f) => ({ ...(f ?? {}), celular_alumno: e.target.value }))
+                                        }
+                                      />
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">DNI:</span>
+                                      <input
+                                        className="ficha-field-value"
+                                        value={editForm.dni ?? ''}
+                                        onChange={(e) =>
+                                          setEditForm((f) => ({ ...(f ?? {}), dni: e.target.value }))
+                                        }
+                                      />
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Correo:</span>
+                                      <input
+                                        className="ficha-field-value"
+                                        value={editForm.email ?? ''}
+                                        onChange={(e) =>
+                                          setEditForm((f) => ({ ...(f ?? {}), email: e.target.value }))
+                                        }
+                                      />
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Padre:</span>
+                                      <input
+                                        className="ficha-field-value"
+                                        placeholder="Nombre del padre"
+                                        value={editForm.nombre_padre ?? ''}
+                                        onChange={(e) =>
+                                          setEditForm((f) => ({ ...(f ?? {}), nombre_padre: e.target.value }))
+                                        }
+                                      />
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Celular padre:</span>
+                                      <input
+                                        className="ficha-field-value"
+                                        value={editForm.celular_padre ?? ''}
+                                        onChange={(e) =>
+                                          setEditForm((f) => ({ ...(f ?? {}), celular_padre: e.target.value }))
+                                        }
+                                      />
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Madre:</span>
+                                      <input
+                                        className="ficha-field-value"
+                                        placeholder="Nombre de la madre"
+                                        value={editForm.nombre_madre ?? ''}
+                                        onChange={(e) =>
+                                          setEditForm((f) => ({ ...(f ?? {}), nombre_madre: e.target.value }))
+                                        }
+                                      />
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Celular madre:</span>
+                                      <input
+                                        className="ficha-field-value"
+                                        value={editForm.celular_madre ?? ''}
+                                        onChange={(e) =>
+                                          setEditForm((f) => ({ ...(f ?? {}), celular_madre: e.target.value }))
+                                        }
+                                      />
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Carrera 1:</span>
+                                      <input
+                                        className="ficha-field-value"
+                                        value={editForm.codigo_carrera_1 ?? ''}
+                                        onChange={(e) =>
+                                          setEditForm((f) => ({ ...(f ?? {}), codigo_carrera_1: e.target.value }))
+                                        }
+                                      />
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Carrera 2:</span>
+                                      <input
+                                        className="ficha-field-value"
+                                        value={editForm.codigo_carrera_2 ?? ''}
+                                        onChange={(e) =>
+                                          setEditForm((f) => ({ ...(f ?? {}), codigo_carrera_2: e.target.value }))
+                                        }
+                                      />
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Dirección:</span>
+                                      <input
+                                        className="ficha-field-value"
+                                        value={editForm.direccion ?? ''}
+                                        onChange={(e) =>
+                                          setEditForm((f) => ({ ...(f ?? {}), direccion: e.target.value }))
+                                        }
+                                      />
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Ubicación:</span>
+                                      <input
+                                        className="ficha-field-value"
+                                        placeholder="Distrito / Provincia / Departamento"
+                                        value={
+                                          [editForm.distrito, editForm.provincia, editForm.departamento]
+                                            .filter(Boolean)
+                                            .join(' / ')
+                                        }
+                                        onChange={(e) => {
+                                          const [d, p, dep] = e.target.value.split('/').map((x) => x.trim())
+                                          setEditForm((f) => ({
+                                            ...(f ?? {}),
+                                            distrito: d || null,
+                                            provincia: p || null,
+                                            departamento: dep || null,
+                                          }))
+                                        }}
+                                      />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                                      <button
+                                        type="button"
+                                        className="btn-primary"
+                                        onClick={() => void saveEdit()}
+                                        disabled={loading}
+                                      >
+                                        Guardar cambios
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn-link"
+                                        onClick={cancelEdit}
+                                        disabled={loading}
+                                      >
+                                        Cancelar
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="ficha-card-section">
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Celular alumno:</span>
+                                      <span className="ficha-field-value">{r.celular_alumno}</span>
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Año:</span>
+                                      <span className="ficha-field-value">{r.anio_que_cursa}</span>
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Correo:</span>
+                                      <span className="ficha-field-value">{r.email ?? '—'}</span>
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Padre:</span>
+                                      <span className="ficha-field-value">
+                                        {r.nombre_padre ?? '—'} {r.celular_padre ? `(${r.celular_padre})` : ''}
+                                      </span>
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Madre:</span>
+                                      <span className="ficha-field-value">
+                                        {r.nombre_madre ?? '—'} {r.celular_madre ? `(${r.celular_madre})` : ''}
+                                      </span>
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Carrera 1:</span>
+                                      <span className="ficha-field-value">{r.codigo_carrera_1 ?? '—'}</span>
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Carrera 2:</span>
+                                      <span className="ficha-field-value">{r.codigo_carrera_2 ?? '—'}</span>
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Dirección:</span>
+                                      <span className="ficha-field-value">{r.direccion ?? '—'}</span>
+                                    </div>
+                                    <div className="ficha-line">
+                                      <span className="ficha-field-label ficha-line-label">Ubicación:</span>
+                                      <span className="ficha-field-value">
+                                        {[r.distrito, r.provincia, r.departamento]
+                                          .filter(Boolean)
+                                          .join(' / ') || '—'}
+                                      </span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className="btn-link"
+                                      style={{ marginTop: 6, paddingLeft: 0 }}
+                                      onClick={() => startEdit(r)}
+                                    >
+                                      Editar datos
+                                    </button>
+                                  </div>
+                                )}
+                              </article>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

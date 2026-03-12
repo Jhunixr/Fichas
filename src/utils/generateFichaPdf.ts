@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 
 export type FichaRecord = {
+  id: string
   primer_apellido: string
   segundo_apellido: string | null
   nombres: string
