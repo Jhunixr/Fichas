@@ -286,54 +286,59 @@ export function PromotoraDashboardPage() {
     setLoading(true)
     setError(null)
     
-    // Primero obtener todas las secciones del colegio
-    const seccionesDelColegio = secciones.filter((s) => s.colegio_id === selectedColegioId)
-    const seccionesIds = seccionesDelColegio.map((s) => s.id)
-    
-    // Eliminar todas las fichas de esas secciones
-    if (seccionesIds.length > 0) {
-      const { error: fichasError } = await supabase!
-        .from('fichas_colegio')
-        .delete()
-        .in('seccion_id', seccionesIds)
-      if (fichasError) {
-        setError('No se pudo eliminar las fichas del colegio. Revisa RLS.')
+    try {
+      // Obtener todas las secciones del colegio
+      const seccionesDelColegio = secciones.filter((s) => s.colegio_id === selectedColegioId)
+      const seccionesIds = seccionesDelColegio.map((s) => s.id)
+      
+      // Eliminar todas las fichas de cada sección (una por una o en grupos)
+      for (const seccionId of seccionesIds) {
+        const { error: fichasError } = await supabase!
+          .from('fichas_colegio')
+          .delete()
+          .eq('seccion_id', seccionId)
+        if (fichasError) {
+          setError('No se pudo eliminar las fichas del colegio. Revisa RLS.')
+          setLoading(false)
+          return
+        }
+      }
+      
+      // Luego eliminar todas las secciones (una por una)
+      for (const seccionId of seccionesIds) {
+        const { error: seccionError } = await supabase!
+          .from('secciones')
+          .delete()
+          .eq('id', seccionId)
+        if (seccionError) {
+          setError('No se pudo eliminar las secciones del colegio. Revisa RLS.')
+          setLoading(false)
+          return
+        }
+      }
+      
+      // Finalmente eliminar el colegio
+      const { error } = await supabase!.from('colegios').delete().eq('id', selectedColegioId)
+      if (error) {
+        setError('No se pudo eliminar el colegio. Revisa RLS.')
         setLoading(false)
         return
       }
-    }
-    
-    // Luego eliminar todas las secciones
-    if (seccionesIds.length > 0) {
-      const { error: seccionesError } = await supabase!
-        .from('secciones')
-        .delete()
-        .in('id', seccionesIds)
-      if (seccionesError) {
-        setError('No se pudo eliminar las secciones del colegio. Revisa RLS.')
-        setLoading(false)
-        return
+      
+      setColegios((prev) => prev.filter((c) => c.id !== selectedColegioId))
+      setSecciones((prev) => prev.filter((s) => s.colegio_id !== selectedColegioId))
+      setCounts((prev) => {
+        const copy = { ...prev }
+        for (const id of seccionesIds) delete copy[id]
+        return copy
+      })
+      setSelectedColegioId('')
+      if (expandedSectionId && seccionesIds.includes(expandedSectionId)) {
+        setExpandedSectionId(null)
+        setSectionRows([])
       }
-    }
-    
-    // Finalmente eliminar el colegio
-    const { error } = await supabase!.from('colegios').delete().eq('id', selectedColegioId)
-    if (error) {
-      setError('No se pudo eliminar el colegio. Revisa RLS.')
-      setLoading(false)
-      return
-    }
-    setColegios((prev) => prev.filter((c) => c.id !== selectedColegioId))
-    setSecciones((prev) => prev.filter((s) => s.colegio_id !== selectedColegioId))
-    setCounts((prev) => {
-      const copy = { ...prev }
-      for (const id of seccionesIds) delete copy[id]
-      return copy
-    })
-    setSelectedColegioId('')
-    if (expandedSectionId && seccionesIds.includes(expandedSectionId)) {
-      setExpandedSectionId(null)
-      setSectionRows([])
+    } catch (err) {
+      setError('Error inesperado al eliminar el colegio.')
     }
     setLoading(false)
   }
